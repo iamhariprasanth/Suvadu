@@ -1,16 +1,29 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { paymentService, initiatePayment, Plan } from '../services/payment';
 import SuvaduLogo from '../components/common/SuvaduLogo';
 
+// Razorpay Payment Links - Replace these with your actual payment links from Razorpay Dashboard
+const RAZORPAY_PAYMENT_LINKS = {
+  basic: 'https://rzp.io/rzp/suvadu-basic',      // Replace with your Basic plan payment link
+  pro: 'https://rzp.io/rzp/suvadu-pro',          // Replace with your Pro plan payment link
+  enterprise: 'https://rzp.io/rzp/suvadu-enterprise', // Replace with your Enterprise plan payment link
+};
+
+interface Plan {
+  id: string;
+  name: string;
+  amount: number;
+  currency: string;
+  description: string;
+  employees: number;
+  features: string[];
+  paymentLink: string;
+}
+
 const PricingPage: React.FC = () => {
-  const [plans, setPlans] = useState<Plan[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [processingPlan, setProcessingPlan] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  // Default plans if API is not available
-  const defaultPlans: Plan[] = [
+  const plans: Plan[] = [
     {
       id: 'basic',
       name: 'Basic',
@@ -19,6 +32,7 @@ const PricingPage: React.FC = () => {
       description: 'Basic Plan - Up to 10 employees',
       employees: 10,
       features: ['Core separation workflows', 'Basic checklists', 'Email support', 'Standard reports'],
+      paymentLink: RAZORPAY_PAYMENT_LINKS.basic,
     },
     {
       id: 'pro',
@@ -28,6 +42,7 @@ const PricingPage: React.FC = () => {
       description: 'Pro Plan - Up to 50 employees',
       employees: 50,
       features: ['Advanced workflows', 'Custom checklists', 'Priority support', 'API access', 'Advanced analytics', 'Custom integrations'],
+      paymentLink: RAZORPAY_PAYMENT_LINKS.pro,
     },
     {
       id: 'enterprise',
@@ -37,40 +52,13 @@ const PricingPage: React.FC = () => {
       description: 'Enterprise Plan - Unlimited employees',
       employees: -1,
       features: ['Custom workflows', 'White-label options', 'Dedicated support', 'SSO integration', 'Custom SLA', 'Onboarding assistance'],
+      paymentLink: RAZORPAY_PAYMENT_LINKS.enterprise,
     },
   ];
 
-  useEffect(() => {
-    const fetchPlans = async () => {
-      try {
-        const fetchedPlans = await paymentService.getPlans();
-        setPlans(fetchedPlans);
-      } catch (error) {
-        console.error('Failed to fetch plans, using defaults:', error);
-        setPlans(defaultPlans);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPlans();
-  }, []);
-
-  const handleSubscribe = async (planId: string) => {
-    setProcessingPlan(planId);
-    setMessage(null);
-
-    initiatePayment(
-      planId,
-      (response) => {
-        setMessage({ type: 'success', text: 'Payment successful! Your subscription is now active.' });
-        setProcessingPlan(null);
-      },
-      (error) => {
-        setMessage({ type: 'error', text: error.message || 'Payment failed. Please try again.' });
-        setProcessingPlan(null);
-      }
-    );
+  const handleSubscribe = (plan: Plan) => {
+    // Open Razorpay payment link in new tab
+    window.open(plan.paymentLink, '_blank');
   };
 
   const formatPrice = (amount: number, currency: string) => {
@@ -79,14 +67,6 @@ const PricingPage: React.FC = () => {
     }
     return `$${amount}`;
   };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -195,25 +175,14 @@ const PricingPage: React.FC = () => {
                 </ul>
 
                 <button
-                  onClick={() => handleSubscribe(plan.id)}
-                  disabled={processingPlan === plan.id}
+                  onClick={() => handleSubscribe(plan)}
                   className={`block w-full text-center py-3 px-6 rounded-lg font-semibold transition ${
                     isPopular
-                      ? 'bg-white text-teal-600 hover:bg-gray-100 disabled:bg-gray-200'
-                      : 'bg-teal-600 text-white hover:bg-teal-700 disabled:bg-teal-400'
-                  } disabled:cursor-not-allowed`}
+                      ? 'bg-white text-teal-600 hover:bg-gray-100'
+                      : 'bg-teal-600 text-white hover:bg-teal-700'
+                  }`}
                 >
-                  {processingPlan === plan.id ? (
-                    <span className="flex items-center justify-center">
-                      <svg className="animate-spin -ml-1 mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                      </svg>
-                      Processing...
-                    </span>
-                  ) : (
-                    'Subscribe Now'
-                  )}
+                  Start Free Trial
                 </button>
               </div>
             );
